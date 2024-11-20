@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management System</title>
+    <script>
+        async function sendRequest(endpoint, method, body = null, requiresAuth = false) {
+            const url = `http://127.0.0.1:8000/api/${endpoint}`;
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+
+            if (requiresAuth) {
+                const token = localStorage.getItem('access_token');
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                } else {
+                    alert('Please login first!');
+                    return;
+                }
+            }
+
+            const options = {
+                method,
+                headers,
+                body: body ? JSON.stringify(body) : null,
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                if (!response.ok) throw data;
+                return data;
+            } catch (error) {
+                console.error('Error:', error);
+                alert(JSON.stringify(error, null, 2));
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await sendRequest('token/', 'POST', { username, password });
+            if (response) {
+                localStorage.setItem('access_token', response.access);
+                localStorage.setItem('refresh_token', response.refresh);
+                alert('Login successful!');
+            }
+        }
+
+        async function fetchEmployees() {
+            const data = await sendRequest('employees/', 'GET', null, true);
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<h3>Employees:</h3>' + JSON.stringify(data, null, 2);
+        }
+
+        async function createEmployee() {
+            const name = document.getElementById('emp_name').value;
+            const email = document.getElementById('emp_email').value;
+            const position = document.getElementById('emp_position').value;
+
+            const response = await sendRequest(
+                'employees/',
+                'POST',
+                { name, email, position, fields: [] },
+                true
+            );
+            if (response) {
+                alert('Employee created successfully!');
+                fetchEmployees();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            alert('Logged out!');
+        }
+    </script>
+</head>
+<body>
+    <h1>Employee Management System</h1>
+
+    <section>
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="logout()">Logout</button>
+    </section>
+
+    <section>
+        <h2>Fetch Employees</h2>
+        <button onclick="fetchEmployees()">Get Employees</button>
+    </section>
+
+    <section>
+        <h2>Create Employee</h2>
+        <input type="text" id="emp_name" placeholder="Name">
+        <input type="email" id="emp_email" placeholder="Email">
+        <input type="text" id="emp_position" placeholder="Position">
+        <button onclick="createEmployee()">Create Employee</button>
+    </section>
+
+    <section>
+        <div id="result" style="white-space: pre-wrap; background: #f4f4f4; padding: 10px; border: 1px solid #ddd; margin-top: 20px;"></div>
+    </section>
+</body>
+</html>
